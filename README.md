@@ -1,5 +1,6 @@
 ![alt text](assets/RadarPS_LOGO.png)
 
+(WORK IN PROGRESS NOT READY YET)
 
 A fast, multi-threaded port scanner with GUI, profile management, and scheduling. Detects open, closed, and filtered ports with banner grabbing and detailed reporting.
 
