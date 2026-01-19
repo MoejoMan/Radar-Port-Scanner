@@ -3,7 +3,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Dict, List, Callable, Optional
 
-
 class PortScanner:
     """Multi-threaded port scanner with progress callbacks"""
     
@@ -35,6 +34,8 @@ class PortScanner:
             callback: Function that takes (scanned_count, total_count)
         """
         self.progress_callback = callback
+
+
     
     def scan(self, target: str, ports: List[int]) -> Dict:
         """
