@@ -1,3 +1,5 @@
+![alt text](assets/RadarPS_LOGO.png)
+
 # Radar Port Scanner
 
 A **fast, modern, multi-threaded port scanner** with a sleek PyQt5 GUI. Built for security professionals, network engineers, and developers.
