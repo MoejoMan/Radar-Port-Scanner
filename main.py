@@ -3,13 +3,14 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.uic import loadUi
 from portscan import PortScanner
 from profiles import Profile_Manager
+from PyQt5.QtCore import QObject, pyqtSignal
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         loadUi("Port_Scanner.ui", self)
         
-        self.resize(800, 600)
+        self.resize(1250, 800)
         self.scanner = PortScanner()
         self.profile_manager = Profile_Manager()
         
@@ -21,7 +22,55 @@ class MainWindow(QMainWindow):
         if not target:
             self.Status_label.setText("Enter a target IP or hostname")
             return
-        self.Status_label.setText(f"Scanning {target}...")
+        
+        preset_text = self.PresetPorts_combo.currentText()
+        if preset_text != "Preset Ports":
+            port_input = preset_text.lower()
+        else:
+            port_input = self.CustomRange_line.text()
+        
+        if not port_input:
+            self.Status_label.setText("Select a preset or enter custom ports")
+            return
+        
+        try:
+            ports = self.scanner.parse_ports(port_input)
+            if not ports:
+                self.Status_label.setText("No valid ports found")
+                return
+        except Exception as e:
+            self.Status_label.setText(f"Error parsing ports: {e}")
+            return
+        
+        timeout = self.Timeout_spin.value() or 0.6
+        threads = self.Threads_spin.value() or 200
+        
+        self.scanner.timeout = timeout
+        self.scanner.threads = threads
+        
+        self.Status_label.setText(f"Scanning {target} ({len(ports)} ports)...")
+
+
+class ScanWorker(QObject):
+    def __init__(self, target, ports, scanner):
+        super().__init__()
+        self.target = target
+        self.ports = ports
+        self.scanner = scanner
+
+        self.progress = pyqtSignal(int, int)
+        self.finished = pyqtSignal(dict)
+
+    def run(self):
+        # Define nested progress callback
+        def on_progress(scanned, total):
+            self.progress.emit(scanned, total)
+        
+        # Set callback and run scan
+        self.scanner.set_progress_callback(on_progress)
+        result = self.scanner.scan(self.target, self.ports)
+        self.finished.emit(result)
+        
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

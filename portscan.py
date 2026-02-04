@@ -177,3 +177,40 @@ class PortScanner:
             compressed.append(str(start))
         
         return compressed
+    
+    # PORT PARSER GOES HERE
+    # Parse preset (Web, Database, etc.) or custom range (1-1024, 80,443)
+    # Returns: set of port integers
+    # Example: parse_ports("Web") → {80, 443, 8080}
+    # Example: parse_ports("1-100,443") → {1, 2, ..., 100, 443}
+
+    def parse_ports(self, port_input: str) -> List[int]:
+        port_input = port_input.strip().lower()
+        ports_set = set()
+
+        # Check if input matches a preset category
+        if port_input in self.PORT_CATEGORIES:
+            ports_set.update(self.PORT_CATEGORIES[port_input].keys())
+        else:
+            parts = port_input.split(',')
+            for part in parts:
+                part = part.strip()
+                if '-' in part:
+                    try:
+                        start, end = part.split('-')
+                        start, end = int(start.strip()), int(end.strip())
+                        ports_set.update(range(start, end + 1))
+                    except ValueError:
+                        pass
+                else:
+                    try:
+                        ports_set.add(int(part))
+                    except ValueError:
+                        pass
+        
+        return sorted(list(ports_set))
+
+
+
+    
+
