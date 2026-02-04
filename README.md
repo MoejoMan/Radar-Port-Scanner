@@ -1,6 +1,12 @@
-![alt text](assets/RadarPS_LOGO.png)
+# Radar Port Scanner
 
-(WORK IN PROGRESS NOT READY YET)
+A **fast, modern, multi-threaded port scanner** with a sleek PyQt5 GUI. Built for security professionals, network engineers, and developers.
+
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![PyQt5](https://img.shields.io/badge/GUI-PyQt5-green)
+![License: MIT](https://img.shields.io/badge/license-MIT-purple)
+
+> **Status:** Beta — Core scanner fully functional, GUI in active development
 
 A fast, multi-threaded port scanner with GUI, profile management, and scheduling. Detects open, closed, and filtered ports with banner grabbing and detailed reporting.
 
