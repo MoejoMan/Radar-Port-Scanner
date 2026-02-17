@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.uic import loadUi
 from portscan import PortScanner
 from profiles import Profile_Manager
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal, QThread
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -49,6 +49,15 @@ class MainWindow(QMainWindow):
         self.scanner.threads = threads
         
         self.Status_label.setText(f"Scanning {target} ({len(ports)} ports)...")
+
+        self.thread = QThread()
+        self.worker = ScanWorker(target, ports, self.scanner)
+        self.worker.moveToThread(self.thread)
+        self.worker.progress.connect(self.update_progress)
+        self.worker.finished.connect(self.scan_finished)
+        self.thread.started.connect(self.worker.run)
+        self.thread.start()
+
 
 
 class ScanWorker(QObject):
