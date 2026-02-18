@@ -54,9 +54,26 @@ class MainWindow(QMainWindow):
         self.worker = ScanWorker(target, ports, self.scanner)
         self.worker.moveToThread(self.thread)
         self.worker.progress.connect(self.update_progress)
+        
+        self.progressBar.setMaximum(len(ports))
+        self.progressBar.setValue(0)
+
         self.worker.finished.connect(self.scan_finished)
+
+        self.tableWidget.setRowCount(0)  # Clear previous results
+        self.tableWidget.setColumnCount(4)
+        self.tableWidget.setHorizontalHeaderLabels(["Port", "Status", "Service", "Banner"])
+
         self.thread.started.connect(self.worker.run)
         self.thread.start()
+
+    def update_progress(self, scanned, total):
+        self.progressBar.setMaximum(total)
+        self.progressBar.setValue(scanned)
+
+    def scan_finished(self, result):
+        print(result)
+        self.Status_label.setText("Scan complete!")
 
 
 
