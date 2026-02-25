@@ -60,12 +60,16 @@ class PortScanner:
                 - error: str or None
                 - results: Dict with scan data or None
         """
+        print(f"[PortScanner] Starting scan on {target} for {len(ports)} ports")
+        
         # Resolve hostname to IP
         ip = self._resolve_host(target)
         if not ip:
+            error = f"Could not resolve {target}"
+            print(f"[PortScanner ERROR] {error}")
             return {
                 "success": False,
-                "error": f"Could not resolve {target}",
+                "error": error,
                 "results": None
             }
         
@@ -106,6 +110,8 @@ class PortScanner:
                         filtered_ports.append(result)
         
         duration = (datetime.utcnow() - start_time).total_seconds()
+        
+        print(f"[PortScanner] Scan complete: {len(open_ports)} open, {len(closed_ports)} closed, {len(filtered_ports)} filtered in {duration:.2f}s")
         
         # Return clean data
         return {
@@ -174,8 +180,11 @@ class PortScanner:
     def _resolve_host(self, host: str) -> Optional[str]:
         """Resolve hostname to IP address"""
         try:
-            return socket.gethostbyname(host)
-        except Exception:
+            ip = socket.gethostbyname(host)
+            print(f"[PortScanner] Resolved {host} -> {ip}")
+            return ip
+        except Exception as e:
+            print(f"[PortScanner] Failed to resolve {host}: {e}")
             return None
     
     @staticmethod

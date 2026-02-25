@@ -1,7 +1,8 @@
 import sys
 import os
 from pathlib import Path
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidgetItem
+from PyQt5.QtGui import QColor
 from PyQt5.uic import loadUi
 from portscan import PortScanner
 from profiles import Profile_Manager
@@ -60,16 +61,20 @@ class MainWindow(QMainWindow):
             if not ports:
                 self.Status_label.setText("No valid ports found")
                 return
+            print(f"[DEBUG] Parsed ports: {ports}")
         except Exception as e:
-            self.Status_label.setText(f"Error parsing ports: {e}")
+            error = f"Error parsing ports: {e}"
+            self.Status_label.setText(error)
+            print(f"[ERROR] {error}")
             return
         
-        timeout = self.Timeout_spin.value() or 0.6
-        threads = self.Threads_spin.value() or 200
+        timeout = float(self.Timeout_spin.value()) or 0.6
+        threads = int(self.Threads_spin.value()) or 200
         
         self.scanner.timeout = timeout
         self.scanner.threads = threads
         
+        print(f"[DEBUG] Scan starting: target={target}, ports={len(ports)}, timeout={timeout}, threads={threads}")
         self.Status_label.setText(f"Scanning {target} ({len(ports)} ports)...")
 
         self.thread = QThread()
@@ -92,6 +97,9 @@ class MainWindow(QMainWindow):
     def update_progress(self, scanned, total):
         self.progressBar.setMaximum(total)
         self.progressBar.setValue(scanned)
+        # Print every 10% for debugging
+        if scanned % max(1, total // 10) == 0 or scanned == total:
+            print(f"[DEBUG] Progress: {scanned}/{total} ({100*scanned//total}%)")
 
     def scan_finished(self, result):
         # Clean up thread
@@ -100,11 +108,23 @@ class MainWindow(QMainWindow):
             self.thread.wait()
             self.thread = None
         
+        print(f"[DEBUG] Scan finished with result: {result}")
+        
         if result.get("success"):
-            self.display_results(result.get("results", {}))
-            self.Status_label.setText("Scan complete!")
+            scan_results = result.get("results", {})
+            print(f"[DEBUG] Display results called with: {scan_results}")
+            self.display_results(scan_results)
+            
+            # Show detailed summary
+            summary = scan_results.get("summary", {})
+            duration = scan_results.get("duration_s", 0)
+            target = scan_results.get("target", "Unknown")
+            status_msg = f"Scan complete! {target}: {summary.get('total_open', 0)} open, {summary.get('total_closed', 0)} closed, {summary.get('total_filtered', 0)} filtered ({duration:.2f}s)"
+            self.Status_label.setText(status_msg)
         else:
-            self.Status_label.setText(f"Scan failed: {result.get('error', 'Unknown error')}")
+            error_msg = f"Scan failed: {result.get('error', 'Unknown error')}"
+            self.Status_label.setText(error_msg)
+            print(f"[ERROR] {error_msg}")
     
     def cancel_scan(self):
         if self.thread and self.thread.isRunning():
@@ -114,11 +134,20 @@ class MainWindow(QMainWindow):
     
     def display_results(self, results):
         """Display scan results in table widget"""
-        from PyQt5.QtWidgets import QTableWidgetItem
         open_ports = results.get("open_ports", [])
-        self.tableWidget.setRowCount(len(open_ports))
+        closed_ports = results.get("closed_ports", [])
+        filtered_ports = results.get("filtered_ports", [])
         
-        for row, port_info in enumerate(open_ports):
+        print(f"[DEBUG] display_results called with {len(open_ports)} open, {len(closed_ports)} closed, {len(filtered_ports)} filtered ports")
+        
+        # Set table row count to total scanned ports
+        total_ports = len(open_ports) + len(closed_ports) + len(filtered_ports)
+        self.tableWidget.setRowCount(total_ports)
+        
+        row = 0
+        
+        # Display open ports first (with green highlight)
+        for port_info in open_ports:
             port = str(port_info.get("port", ""))
             status = port_info.get("status", "unknown")
             service = self.scanner.get_service_name(int(port)) if port else ""
@@ -128,22 +157,58 @@ class MainWindow(QMainWindow):
             if banner and len(banner) > 50:
                 banner = banner[:47] + "..."
             
-            self.tableWidget.setItem(row, 0, QTableWidgetItem(port))
+            port_item = QTableWidgetItem(port)
+            port_item.setBackground(QColor(76, 175, 80))  # Green for open
+            
+            self.tableWidget.setItem(row, 0, port_item)
             self.tableWidget.setItem(row, 1, QTableWidgetItem(status))
             self.tableWidget.setItem(row, 2, QTableWidgetItem(service))
             self.tableWidget.setItem(row, 3, QTableWidgetItem(banner or "N/A"))
+            row += 1
+        
+        # Display closed ports with gray highlight
+        for port_info in closed_ports:
+            port = str(port_info.get("port", ""))
+            status = port_info.get("status", "closed")
+            service = self.scanner.get_service_name(int(port)) if port else ""
+            
+            port_item = QTableWidgetItem(port)
+            port_item.setBackground(QColor(158, 158, 158))  # Gray for closed
+            
+            self.tableWidget.setItem(row, 0, port_item)
+            self.tableWidget.setItem(row, 1, QTableWidgetItem(status))
+            self.tableWidget.setItem(row, 2, QTableWidgetItem(service))
+            self.tableWidget.setItem(row, 3, QTableWidgetItem("N/A"))
+            row += 1
+        
+        # Display filtered ports
+        for port_info in filtered_ports:
+            port = str(port_info.get("port", ""))
+            status = port_info.get("status", "filtered")
+            service = self.scanner.get_service_name(int(port)) if port else ""
+            
+            port_item = QTableWidgetItem(port)
+            port_item.setBackground(QColor(255, 193, 7))  # Yellow for filtered
+            
+            self.tableWidget.setItem(row, 0, port_item)
+            self.tableWidget.setItem(row, 1, QTableWidgetItem(status))
+            self.tableWidget.setItem(row, 2, QTableWidgetItem(service))
+            self.tableWidget.setItem(row, 3, QTableWidgetItem("N/A"))
+            row += 1
+        
+        print(f"[DEBUG] Table updated with {row} total rows")
 
 
 
 class ScanWorker(QObject):
+    progress = pyqtSignal(int, int)
+    finished = pyqtSignal(dict)
+    
     def __init__(self, target, ports, scanner):
         super().__init__()
         self.target = target
         self.ports = ports
         self.scanner = scanner
-
-        self.progress = pyqtSignal(int, int)
-        self.finished = pyqtSignal(dict)
 
     def run(self):
         # Define nested progress callback

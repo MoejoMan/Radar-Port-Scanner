@@ -16,22 +16,19 @@ A fast, multi-threaded port scanner with GUI, profile management, and scheduling
 
 ## 🚀 Quick Start
 
-### Windows Users
-**Just double-click `START.bat`** - It handles everything!
-- Checks for Python
-- Installs dependencies
-- Launches the app
-
-### Linux/Mac Users
+### All Platforms
 ```bash
-python launcher.py
-```
-
-Or manually:
-```bash
-pip install -r requirements.txt
 python main.py
 ```
+
+### Windows Users (No Terminal Needed)
+**Just double-click `START.bat`** in the folder!
+
+### First Time Setup
+If Python isn't installed:
+1. Download from [python.org](https://www.python.org/downloads/)
+2. Check "Add Python to PATH" during install
+3. Restart and run `python main.py`
 
 ## Features
 
@@ -49,30 +46,11 @@ python main.py
 - **Scheduled scans** - Run scans at specific intervals (planned)
 - **JSON results** - Export detailed scan data
 
-## Requirements
-
-- Python 3.8+
-
-### First Time Setup (If Python isn't installed)
-
-1. Download Python from [python.org](https://www.python.org/downloads/)
-2. **Important:** Check "Add Python to PATH" during installation
-3. Run `START.bat` (Windows) or `python launcher.py` (Linux/Mac)
-
-### Manual Install
-
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
 ## Project Structure
 
 ```
 Port-Scanner/
-├── START.bat            # Windows quick start (double-click!)
-├── launcher.py          # Cross-platform launcher
-├── run.bat              # Alternative Windows launcher
+├── START.bat            # Windows launcher (double-click this!)
 ├── main.py              # PyQt5 GUI application
 ├── portscan.py          # Core scanner engine
 ├── profiles.py          # Profile & database management
