@@ -14,6 +14,15 @@ class PortScanner:
         "admin": {22: "SSH", 3389: "RDP", 5900: "VNC"}
     }
     
+    # Common port to service mapping
+    COMMON_SERVICES = {
+        20: "FTP-DATA", 21: "FTP", 22: "SSH", 23: "Telnet",
+        25: "SMTP", 53: "DNS", 80: "HTTP", 110: "POP3", 143: "IMAP",
+        443: "HTTPS", 445: "SMB", 3306: "MySQL", 3389: "RDP",
+        5432: "PostgreSQL", 5900: "VNC", 8080: "HTTP-ALT", 8443: "HTTPS-ALT",
+        1433: "MSSQL", 27017: "MongoDB", 6379: "Redis"
+    }
+    
     def __init__(self, timeout: float = 0.6, threads: int = 200):
         """
         Initialize scanner
@@ -127,6 +136,8 @@ class PortScanner:
             s.close()
             if res == 0:
                 return {"port": port, "status": "open"}
+            elif res == 111:
+                return {"port": port, "status": "filtered"}
             else:
                 return {"port": port, "status": "closed"}
         except Exception:
@@ -138,11 +149,27 @@ class PortScanner:
             s = socket.socket()
             s.settimeout(2)
             s.connect((host, port))
-            banner = s.recv(1024).decode().strip()
+            banner_bytes = s.recv(1024)
             s.close()
+            
+            # Try UTF-8 first, then Latin-1 as fallback
+            try:
+                banner = banner_bytes.decode('utf-8').strip()
+            except UnicodeDecodeError:
+                try:
+                    banner = banner_bytes.decode('latin-1').strip()
+                except UnicodeDecodeError:
+                    banner = repr(banner_bytes[:50])  # Fall back to repr
+            
+            # Filter out control characters
+            banner = ''.join(c for c in banner if c.isprintable() or c in '\n\r\t')
             return banner if banner else None
         except Exception:
             return None
+    
+    def get_service_name(self, port: int) -> str:
+        """Get common service name for port"""
+        return self.COMMON_SERVICES.get(port, "")
     
     def _resolve_host(self, host: str) -> Optional[str]:
         """Resolve hostname to IP address"""

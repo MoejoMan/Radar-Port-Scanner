@@ -14,6 +14,25 @@ A fast, multi-threaded port scanner with GUI, profile management, and scheduling
 
 **Note:** This tool is for educational purposes only. Do not scan networks or devices without explicit permission. Unauthorized scanning may be illegal.
 
+## 🚀 Quick Start
+
+### Windows Users
+**Just double-click `START.bat`** - It handles everything!
+- Checks for Python
+- Installs dependencies
+- Launches the app
+
+### Linux/Mac Users
+```bash
+python launcher.py
+```
+
+Or manually:
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
 ## Features
 
 - **Multi-threaded scanning** - 200 concurrent threads for speed
@@ -34,22 +53,34 @@ A fast, multi-threaded port scanner with GUI, profile management, and scheduling
 
 - Python 3.8+
 
-Install dependencies:
+### First Time Setup (If Python isn't installed)
+
+1. Download Python from [python.org](https://www.python.org/downloads/)
+2. **Important:** Check "Add Python to PATH" during installation
+3. Run `START.bat` (Windows) or `python launcher.py` (Linux/Mac)
+
+### Manual Install
 
 ```bash
 pip install -r requirements.txt
+python main.py
 ```
 
 ## Project Structure
 
 ```
-Radar/
-├── portscan.py          # Core scanner (PortScanner class)
-├── profiles.py          # Profile management (SQLite)
-├── main.py              # PyQt5 GUI (in development)
-├── data.db              # Profile storage
-├── scans/               # JSON scan results
-└── requirements.txt
+Port-Scanner/
+├── START.bat            # Windows quick start (double-click!)
+├── launcher.py          # Cross-platform launcher
+├── run.bat              # Alternative Windows launcher
+├── main.py              # PyQt5 GUI application
+├── portscan.py          # Core scanner engine
+├── profiles.py          # Profile & database management
+├── Port_Scanner.ui      # GUI layout (Qt Designer)
+├── requirements.txt     # Python dependencies
+├── data.db              # Profile storage (auto-created)
+├── assets/              # Logo and images
+└── README.md            # This file
 ```
 
 ## Usage (Current - CLI)

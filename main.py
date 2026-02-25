@@ -1,24 +1,46 @@
 import sys
+import os
+from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.uic import loadUi
 from portscan import PortScanner
 from profiles import Profile_Manager
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
 
+# Get the directory where this script is located
+APP_DIR = Path(__file__).resolve().parent
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        loadUi("Port_Scanner.ui", self)
+        # Load UI from same directory as this script
+        ui_file = APP_DIR / "Port_Scanner.ui"
+        loadUi(str(ui_file), self)
         
         self.resize(1250, 800)
         self.scanner = PortScanner()
         self.profile_manager = Profile_Manager()
+        self.thread = None
+        self.worker = None
         
         # Signal connections
         self.StartScan_push.clicked.connect(self.start_scan)
+        if hasattr(self, 'CancelScan_push'):
+            self.CancelScan_push.clicked.connect(self.cancel_scan)
+    
+    def closeEvent(self, event):
+        """Clean up resources on window close"""
+        self.cancel_scan()
+        self.profile_manager.close()
+        event.accept()
     
     def start_scan(self):
-        target = self.PortInput_line.text()
+        if self.thread and self.thread.isRunning():
+            self.Status_label.setText("Scan already in progress")
+            return
+        
+        target = self.PortInput_line.text().strip()
         if not target:
             self.Status_label.setText("Enter a target IP or hostname")
             return
@@ -27,7 +49,7 @@ class MainWindow(QMainWindow):
         if preset_text != "Preset Ports":
             port_input = preset_text.lower()
         else:
-            port_input = self.CustomRange_line.text()
+            port_input = self.CustomRange_line.text().strip()
         
         if not port_input:
             self.Status_label.setText("Select a preset or enter custom ports")
@@ -72,8 +94,44 @@ class MainWindow(QMainWindow):
         self.progressBar.setValue(scanned)
 
     def scan_finished(self, result):
-        print(result)
-        self.Status_label.setText("Scan complete!")
+        # Clean up thread
+        if self.thread:
+            self.thread.quit()
+            self.thread.wait()
+            self.thread = None
+        
+        if result.get("success"):
+            self.display_results(result.get("results", {}))
+            self.Status_label.setText("Scan complete!")
+        else:
+            self.Status_label.setText(f"Scan failed: {result.get('error', 'Unknown error')}")
+    
+    def cancel_scan(self):
+        if self.thread and self.thread.isRunning():
+            self.thread.quit()
+            self.thread.wait()
+            self.Status_label.setText("Scan cancelled")
+    
+    def display_results(self, results):
+        """Display scan results in table widget"""
+        from PyQt5.QtWidgets import QTableWidgetItem
+        open_ports = results.get("open_ports", [])
+        self.tableWidget.setRowCount(len(open_ports))
+        
+        for row, port_info in enumerate(open_ports):
+            port = str(port_info.get("port", ""))
+            status = port_info.get("status", "unknown")
+            service = self.scanner.get_service_name(int(port)) if port else ""
+            banner = port_info.get("banner", "")
+            
+            # Truncate banner if too long
+            if banner and len(banner) > 50:
+                banner = banner[:47] + "..."
+            
+            self.tableWidget.setItem(row, 0, QTableWidgetItem(port))
+            self.tableWidget.setItem(row, 1, QTableWidgetItem(status))
+            self.tableWidget.setItem(row, 2, QTableWidgetItem(service))
+            self.tableWidget.setItem(row, 3, QTableWidgetItem(banner or "N/A"))
 
 
 
