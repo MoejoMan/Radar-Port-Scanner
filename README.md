@@ -1,96 +1,89 @@
-![alt text](assets/RadarPS_LOGO.png)
+![Radar Port Scanner](assets/RadarPS_LOGO.png)
 
 # Radar Port Scanner
 
-A **fast, modern, multi-threaded port scanner** with a sleek PyQt5 GUI. Built for security professionals, network engineers, and developers.
-
+[![Tests](https://github.com/MoejoMan/Radar-Port-Scanner/actions/workflows/tests.yml/badge.svg)](https://github.com/MoejoMan/Radar-Port-Scanner/actions/workflows/tests.yml)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![PyQt5](https://img.shields.io/badge/GUI-PyQt5-green)
 ![License: MIT](https://img.shields.io/badge/license-MIT-purple)
 
-> **Status:** Beta — Core scanner fully functional, GUI in active development
+A multi threaded TCP port scanner in Python with a PyQt5 GUI. It separates open, closed, and filtered ports, grabs service banners from open ports, and can save scan configurations as profiles.
 
-A fast, multi-threaded port scanner with GUI, profile management, and scheduling. Detects open, closed, and filtered ports with banner grabbing and detailed reporting.
+> **Status:** Beta. The scanner engine is tested. The GUI is still in active development.
 
-**Note:** This tool is for educational purposes only. Do not scan networks or devices without explicit permission. Unauthorized scanning may be illegal.
+**Use it only on systems you own or have written permission to test.** Unauthorised scanning may be illegal.
 
-## 🚀 Quick Start
+## Quick start
 
-### All Platforms
 ```bash
+pip install -r requirements.txt
 python main.py
 ```
 
-### Windows Users (No Terminal Needed)
-**Just double-click `START.bat`** in the folder!
+On Windows you can also double click `START.bat`.
 
-### First Time Setup
-If Python isn't installed:
-1. Download from [python.org](https://www.python.org/downloads/)
-2. Check "Add Python to PATH" during install
-3. Restart and run `python main.py`
+## What works today
 
-## Features
+- **Multi threaded scanning.** A thread pool, 200 workers by default, with a progress callback.
+- **Open, closed, and filtered detection.** A completed handshake is open, an active refusal is closed, and no usable reply (timeout, unreachable) is filtered. The same rules apply on Linux, macOS, and Windows. Windows can take about two seconds to report a refused connection, so from Windows use a timeout of 3 seconds or more if you need closed and filtered told apart.
+- **Banner grabbing** on open ports, with UTF 8 and Latin 1 decoding.
+- **Port input.** Presets (web, database, email, admin) or custom lists and ranges such as `22, 80-90, 443`.
+- **Profiles.** A SQLite backed profile manager to save, load, list, and delete scan configurations.
+- **PyQt5 GUI** with start, cancel, live progress, and a results view.
+- **Structured results.** `scan()` returns a plain dictionary that is easy to serialise, for example with `json.dumps`.
 
-- **Multi-threaded scanning** - 200 concurrent threads for speed
-- **Port detection** - Identifies open, closed, and filtered ports
-- **Banner grabbing** - Service identification on open ports
-- **Pre-set categories:**
-  - Web (HTTP, HTTPS, HTTP-alt)
-  - Database (MySQL, PostgreSQL, MSSQL)
-  - Email (SMTP, POP3, IMAP)
-  - Admin (SSH, RDP, VNC)
-- **Custom port ranges** - Scan any range you specify
-- **PyQt5 GUI** - User-friendly interface (in development)
-- **Save profiles** - Store and reuse scan configurations
-- **Scheduled scans** - Run scans at specific intervals (planned)
-- **JSON results** - Export detailed scan data
-
-## Project Structure
-
-```
-Port-Scanner/
-├── START.bat            # Windows launcher (double-click this!)
-├── main.py              # PyQt5 GUI application
-├── portscan.py          # Core scanner engine
-├── profiles.py          # Profile & database management
-├── Port_Scanner.ui      # GUI layout (Qt Designer)
-├── requirements.txt     # Python dependencies
-├── data.db              # Profile storage (auto-created)
-├── assets/              # Logo and images
-└── README.md            # This file
-```
-
-## Usage (Current - CLI)
+## Use the engine from Python
 
 ```python
 from portscan import PortScanner
 
-# Create scanner
 scanner = PortScanner(timeout=0.6, threads=200)
-
-# Set progress callback (optional)
 scanner.set_progress_callback(lambda scanned, total: print(f"{scanned}/{total}"))
 
-# Run scan
-results = scanner.scan(target="192.168.1.1", ports=[80, 443, 22, 3306])
+ports = scanner.parse_ports("22, 80, 443, 3306")
+result = scanner.scan("192.168.1.1", ports)
 
-# Check results
-if results["success"]:
-    summary = results["results"]["summary"]
-    print(f"Open ports: {summary['total_open']}")
+if result["success"]:
+    summary = result["results"]["summary"]
+    print(f"Open: {summary['total_open']}  Closed: {summary['total_closed']}  Filtered: {summary['total_filtered']}")
 else:
-    print(f"Error: {results['error']}")
+    print(f"Error: {result['error']}")
 ```
 
-## Planned Features
+## Testing
 
-- [ ] PyQt5 GUI interface
-- [ ] Save/load scan profiles
-- [ ] Scheduled scans with APScheduler
-- [ ] Visual dashboard with charts
-- [ ] Scan history and comparisons
+```bash
+pip install pytest
+python -m pytest -q
+```
 
-## DISCLAIMER
+The tests cover port parsing, range compression, the open, closed, and filtered classification, banner grabbing, progress reporting, and error handling. Scan tests run against sockets opened on `127.0.0.1`, so they never touch the network. GitHub Actions runs them on Ubuntu and Windows for every push to `main` and every pull request.
 
-This tool is for educational purposes only. Do not scan networks or devices without explicit permission. Unauthorized scanning may be illegal. The author assumes no liability for misuse.
+## Project structure
+
+```
+Radar-Port-Scanner/
+  main.py             PyQt5 GUI application
+  portscan.py         Scanner engine
+  profiles.py         Profile storage (SQLite)
+  Port_Scanner.ui     GUI layout (Qt Designer)
+  START.bat           Windows launcher
+  requirements.txt    Python dependencies
+  tests/              Test suite
+  assets/             Logo and images
+```
+
+## Not built yet
+
+- Scheduled scans
+- JSON export from the GUI
+- Charts and a visual dashboard
+- Scan history and comparisons
+
+## Disclaimer
+
+This tool is for educational purposes only. The author accepts no liability for misuse.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

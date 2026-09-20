@@ -1,3 +1,4 @@
+import errno
 import socket
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -133,6 +134,24 @@ class PortScanner:
             }
         }
     
+    # Error codes meaning "the host actively refused the connection", i.e. a closed port.
+    # 111 / ECONNREFUSED on Linux and macOS, 10061 / WSAECONNREFUSED on Windows.
+    _REFUSED_CODES = {errno.ECONNREFUSED, 10061}
+
+    @classmethod
+    def classify_connect_result(cls, code: int) -> str:
+        """Map a connect_ex() result to "open", "closed", or "filtered".
+
+        0 means the handshake completed (open). An active refusal means the host
+        answered and nothing is listening (closed). Anything else, such as a timeout
+        or an unreachable network, means no usable reply came back (filtered).
+        """
+        if code == 0:
+            return "open"
+        if code in cls._REFUSED_CODES:
+            return "closed"
+        return "filtered"
+
     def _scan_port(self, host: str, port: int) -> Dict:
         """Scan a single port"""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -140,12 +159,7 @@ class PortScanner:
         try:
             res = s.connect_ex((host, port))
             s.close()
-            if res == 0:
-                return {"port": port, "status": "open"}
-            elif res == 111:
-                return {"port": port, "status": "filtered"}
-            else:
-                return {"port": port, "status": "closed"}
+            return {"port": port, "status": self.classify_connect_result(res)}
         except Exception:
             return {"port": port, "status": "filtered"}
     
